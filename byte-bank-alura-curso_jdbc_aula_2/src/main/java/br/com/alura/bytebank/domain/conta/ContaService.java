@@ -2,7 +2,6 @@ package br.com.alura.bytebank.domain.conta;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
-import java.util.HashSet;
 import java.util.Set;
 
 import br.com.alura.bytebank.ConnectionFactory;
@@ -10,9 +9,7 @@ import br.com.alura.bytebank.domain.RegraDeNegocioException;
 
 public class ContaService {
 
-    private Set<Conta> contas = new HashSet<>();
-
-    private ConnectionFactory connection;
+     private ConnectionFactory connection;
 
     public ContaService() {
         this.connection = new ConnectionFactory();
@@ -42,6 +39,10 @@ public class ContaService {
         if (valor.compareTo(conta.getSaldo()) > 0) {
             throw new RegraDeNegocioException("Saldo insuficiente!");
         }
+        
+        if(!conta.getEstaAtiva()) {
+        	 throw new RegraDeNegocioException("Conta não esta ativa!");
+        }
 
        BigDecimal novoValor = conta.getSaldo().subtract(valor);
        alterar(conta, novoValor);
@@ -53,6 +54,10 @@ public class ContaService {
         if (valor.compareTo(BigDecimal.ZERO) <= 0) {
             throw new RegraDeNegocioException("Valor do deposito deve ser superior a zero!");
         }
+        
+        if(!conta.getEstaAtiva()) {
+       	 throw new RegraDeNegocioException("Conta não esta ativa!");
+       }
 
        BigDecimal novoValor = conta.getSaldo().add(valor);
        alterar(conta, novoValor);
@@ -71,7 +76,25 @@ public class ContaService {
             throw new RegraDeNegocioException("Conta não pode ser encerrada pois ainda possui saldo!");
         }
 
-        contas.remove(conta);
+     Connection conn = connection.recuperarConexao();
+     new ContaDAO(conn).deletar(numeroDaConta);
+     
+    }
+    
+    public void encerrarLogico(Integer numeroDaConta) {
+    	
+    	 var conta = buscarContaPorNumero(numeroDaConta);
+         if (conta.possuiSaldo()) {
+             throw new RegraDeNegocioException("Conta não pode ser encerrada pois ainda possui saldo!");
+         }
+
+      Connection conn = connection.recuperarConexao();
+      new ContaDAO(conn).alterarLogico(numeroDaConta);
+      
+    	 if(!conta.getEstaAtiva()) {
+        	 throw new RegraDeNegocioException("Conta não esta ativa!");
+        }
+    	
     }
 
     private  Conta buscarContaPorNumero(Integer numero) {
